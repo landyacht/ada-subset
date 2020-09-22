@@ -15,14 +15,14 @@ enum token_type {
 	token_type_lit_dec,              /* Decimal (floating point) literal */
 	token_type_lit_str,              /* String literal */
 	/* The following operators listed in order of decreasing precedence */
-	token_type_unop_not              /* Logical negation (not) */
+	token_type_unop_not,             /* Logical negation (not) */
 	token_type_binop_multiplicative, /* Binary operators with multiplicative precedence (* / mod rem) */
 	token_type_binop_additive,       /* Binary operators with additive precedence (+ -) */
 	token_type_binop_relational,     /* Relational operators like =, >, <, /=, etc. */
 	token_type_binop_logical,        /* Logical operators like and, or, xor */
 	token_type_binop_assign,         /* := */
 	/* End operator listing */
-	token_type_statement_sep  /* Semicolons separating statements */
+	token_type_statement_sep         /* Semicolons separating statements */
 };
 
 /* 

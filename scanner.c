@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <string.h>
+#include <stdbool.h>
 
 enum lexer_state {
 	state_start,         /* no characters yet */
@@ -55,7 +57,7 @@ int lexer_next() {
 				is_eof = 1;
 			}
 
-			clearerr();
+			clearerr(fp);
 		}
 
 		/* For convenience in the switch statement */
