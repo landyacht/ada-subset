@@ -33,7 +33,7 @@ int lexer_init(char *filename) {
 
 int lexer_next() {
 	/* Where in current_lexeme we are */
-	static int needle = 0;
+	int needle = 0;
 	/* Have we reached the end of the file? */
 	static bool is_eof = 0;
 	/* Our current state, so we know how to transition */
@@ -95,4 +95,8 @@ int lexer_next() {
 
 	/* Theoretically unreachable code */
 	puts("This should never print!!!");
+}
+
+void lexer_close() {
+	fclose(fp);
 }
