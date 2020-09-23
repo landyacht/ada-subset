@@ -62,10 +62,10 @@ int lexer_next() {
 
 		/* For convenience in the switch statement */
 		bool is_ws = is_eof
-			| read == ' '  /* space */
-			| read == '\t' /* tabulation */
-			| read == '\n' /* newline */
-			| read == '\r' /* carriage return */
+			|| ' '  == read /* space */
+			|| '\t' == read /* tabulation */
+			|| '\n' == read /* newline */
+			|| '\r' == read /* carriage return */
 			;
 
 		/* TODO implement the state machine here */
