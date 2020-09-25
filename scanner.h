@@ -1,3 +1,6 @@
+#ifndef SCANNER_H
+#define SCANNER_H
+
 #define MAX_LEXEME_LEN 150
 #define MAX_ERROR_LEN 100
 
@@ -64,3 +67,6 @@ int lexer_next();
 
 /* lexer_close - Release resources and return to un-initialized state */
 void lexer_close();
+
+/* this endif ends the include guard */
+#endif 
