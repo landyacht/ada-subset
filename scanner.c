@@ -4,14 +4,14 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
-#include <stdbool.h>
+
+#define LEXER_SET_ERROR(...) snprintf(current_error, MAX_ERROR_LEN + 1, __VA_ARGS__)
 
 enum lexer_state {
 	state_start,         /* no characters yet */
 	state_maybe_relop,   /* we have encountered < or > or / which may be alone or with an = */
-	state_def_relop,     /* we definitely have a relop */
-	state_ident_kw_op,   /* we have part or all of an identifier, keyword, or operator (and, or, xor, mod, rem) */
-	state_def_binop,     /* we definitely have a binary operator (+ - * &) */
+	state_ident,         /* we have part or all of an identifier */
+	state_kw_op,         /* we have part or all of a keyword (is, begin, etc.) or operator (mod, rem, etc.) */
 	state_maybe_assign,  /* we either have the assignment op or a colon */
 	state_in_str,        /* we're inside a string */
 	state_num_leftside,  /* either an integer or the left side of a decimal literal */
@@ -21,7 +21,7 @@ enum lexer_state {
 
 FILE *fp;
 
-int lexer_init(char *filename) {
+enum lexer_ret lexer_init(char *filename) {
 	fp = fopen(filename, "r");
 	if (NULL == fp) {
 		sprintf(current_error, "fopen failed with errno = %d", errno);
@@ -31,9 +31,11 @@ int lexer_init(char *filename) {
 	return 0;
 }
 
-int lexer_next() {
+enum lexer_ret lexer_next() {
 	/* Where in current_lexeme we are */
 	int needle = 0;
+	/* For writing a string literal's contents */
+	int str_needle = 0;
 	/* Have we reached the end of the file? */
 	static bool is_eof = 0;
 	/* Our current state, so we know how to transition */
@@ -50,14 +52,18 @@ int lexer_next() {
 		if (0 == num_read) {
 			if (ferror(fp)) {
 				sprintf(current_error, "fread failed");
-				return 2;
+				clearerr(fp);
+				return lexer_ret_fread_fail;
 			}
 
 			if (feof(fp)) {
 				is_eof = 1;
 			}
-
-			clearerr(fp);
+		}
+		else {
+			if ('\n' == read) {
+				current_line++;
+			}
 		}
 
 		/* For convenience in the switch statement */
@@ -67,29 +73,262 @@ int lexer_next() {
 			|| '\n' == read /* newline */
 			|| '\r' == read /* carriage return */
 			;
+		bool is_alpha_lc = read >= 'a' && read <= 'z';
+		bool is_alpha_uc = read >= 'A' && read <= 'Z';
+		bool is_alpha = is_alpha_lc || is_alpha_uc;
+		bool is_numeric = read >= '0' && read <= '9';
+		bool is_alphanumeric = is_alpha || is_numeric;
 
 		/* TODO implement the state machine here */
 		switch (cur_state) {
 		case state_start:
+			if (is_eof) {
+				return lexer_ret_eof;
+			}
+			else if (':' == read) {
+				cur_state = state_maybe_assign;
+				current_lexeme[needle++] = read;
+			}
+			else if (';' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_statement_sep;
+				return lexer_ret_success;
+			}
+			else if (is_alpha_uc) {
+				cur_state = state_ident;
+				current_lexeme[needle++] = read;
+			}
+			else if (is_alpha_lc) {
+				cur_state = state_kw_op;
+				current_lexeme[needle++] = read;
+			}
+			else if (is_numeric) {
+				cur_state = state_num_leftside;
+				current_lexeme[needle++] = read;
+			}
+			else if ('.' == read) {
+				cur_state = state_num_dec;
+				current_lexeme[needle++] = read;
+			}
+			else if ('"' == read) {
+				cur_state = state_in_str;
+				current_lexeme[needle++] = read;
+				current_value.val_str = malloc(sizeof(char) * MAX_LEXEME_LEN - 1);
+			}
+			else if ('+' == read || '-' == read || '&' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_additive;
+				return lexer_ret_success;
+			}
+			else if ('*' == read) { /* / is not included here since it might be part of /= */
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_multiplicative;
+				return lexer_ret_success;
+			}
+			else if ('(' == read || ')' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = '(' == read ? token_type_lparen : token_type_rparen;
+				return lexer_ret_success;
+			}
+			else if (',' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_comma;
+				return lexer_ret_success;
+			}
+			else if ('/' == read || '>' == read || '<' == read) {
+				cur_state = state_maybe_relop;
+				current_lexeme[needle++] = read;
+			}
+			else {
+				LEXER_SET_ERROR("Unexpected character %c while in state_start", read);
+				return lexer_ret_invalid;
+			}
 			break;
 		case state_maybe_relop:
+			if ('=' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_relational;
+				return lexer_ret_success;
+			}
+			else {
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_relational;
+				fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
+				return lexer_ret_success;
+			}
 			break;
-		case state_def_relop:
+		case state_ident:
+			if (is_alphanumeric || '_' == read) {
+				current_lexeme[needle++] = read;
+			}
+			else {
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_relational;
+				fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
+				return lexer_ret_success;
+			}
 			break;
-		case state_ident_kw_op:
-			break;
-		case state_def_binop:
+		case state_kw_op:
+			if (is_alpha_lc) {
+				current_lexeme[needle++] = read;
+			}
+			/* whitespace or a unary operator may follow a keyword */
+			else if (is_ws || '-' == read || '+' == read) {
+				if ('-' == read || '+' == read) {
+					fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
+				}
+
+				current_lexeme[needle] = '\0';
+				if (   0 == strcmp(current_lexeme, "mod")
+				    || 0 == strcmp(current_lexeme, "rem")) {
+					current_token_type = token_type_binop_multiplicative;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "procedure")) {
+					current_token_type = token_type_keyword_proc;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "is")) {
+					current_token_type = token_type_keyword_is;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "if")) {
+					current_token_type = token_type_keyword_if;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "then")) {
+					current_token_type = token_type_keyword_then;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "begin")) {
+					current_token_type = token_type_keyword_begin;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "end")) {
+					current_token_type = token_type_keyword_end;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "return")) {
+					current_token_type = token_type_keyword_return;
+					return lexer_ret_success;
+				}
+				else {
+					LEXER_SET_ERROR("Unknown keyword %s", current_lexeme);
+					return lexer_ret_invalid;
+				}
+			}
+			else {
+				current_lexeme[needle] = '\0';
+				LEXER_SET_ERROR("Unexpected character during or after keyword %s: %c", current_lexeme, read);
+				return lexer_ret_invalid;
+			}
 			break;
 		case state_maybe_assign:
+			if ('=' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_assign;
+				return lexer_ret_success;
+			}
+			else if (is_ws || is_alpha_uc) {
+				if (is_alpha_uc) {
+					fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
+				}
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_colon;
+				return lexer_ret_success;
+			}
+			else {
+				LEXER_SET_ERROR("Character %c after colon will never be valid", read);
+				return lexer_ret_invalid;
+			}
 			break;
 		case state_in_str:
+			if ('"' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_value.val_str[str_needle] = '\0';
+				current_token_type = token_type_lit_str;
+				return lexer_ret_success;
+			}
+			else if (is_eof) {
+				LEXER_SET_ERROR("Encountered end of file in string literal");
+				return lexer_ret_invalid;
+			}
+			else {
+				current_lexeme[needle++] = read;
+				current_value.val_str[str_needle++] = read;
+			}
 			break;
 		case state_num_leftside:
+			if (is_numeric) {
+				current_lexeme[needle++] = read;
+			}
+			else if ('.' == read) {
+				current_lexeme[needle++] = read;
+				cur_state = state_num_dec;
+			}
+			else if (is_alpha) {
+				current_lexeme[needle] = '\0';
+				LEXER_SET_ERROR("Unexpected alpha character '%c' following integer literal '%s'", read, current_lexeme);
+				return lexer_ret_invalid;
+			}
+			else {
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_lit_int;
+				current_value.val_int = atol(current_lexeme);
+				if (!is_ws) {
+					fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
+				}
+				return lexer_ret_success;
+			}
 			break;
 		case state_num_dec:
+			if (is_numeric) {
+				cur_state = state_num_rightside;
+				current_lexeme[needle++] = read;
+			}
+			else if (is_eof) {
+				current_lexeme[needle] = '\0';
+				LEXER_SET_ERROR("Expecting fractional part for decimal '%s' but encountered end of file", current_lexeme);
+				return lexer_ret_invalid;
+			}
+			else {
+				current_lexeme[needle] = '\0';
+				LEXER_SET_ERROR("Expecting fractional part for decimal '%s', but found '%c'", current_lexeme, read);
+				return lexer_ret_invalid;
+			}
 			break;
 		case state_num_rightside:
+			if (is_numeric) {
+				current_lexeme[needle++] = read;
+			}
+			else if (is_alpha) {
+				current_lexeme[needle] = '\0';
+				LEXER_SET_ERROR("Unexpected alpha character '%c' following decimal literal '%s'", read, current_lexeme);
+				return lexer_ret_invalid;
+			}
+			else {
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_lit_dec;
+				current_value.val_dec = strtod(current_lexeme, NULL);
+				if (!is_ws) {
+					fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
+				}
+				return lexer_ret_success;
+			}
 			break;
+		}
+
+		if (needle == MAX_LEXEME_LEN - 1) {
+			LEXER_SET_ERROR("Lexeme about to exceed max lexeme length (%d)", MAX_LEXEME_LEN);
+			return lexer_ret_invalid;
 		}
 	}
 
@@ -99,4 +338,5 @@ int lexer_next() {
 
 void lexer_close() {
 	fclose(fp);
+	current_line = 1;
 }
