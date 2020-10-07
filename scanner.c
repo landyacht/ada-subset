@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <string.h>
 
-#define LEXER_SET_ERROR(...) snprintf(current_error, MAX_ERROR_LEN + 1, __VA_ARGS__)
+#define LEXER_SET_ERROR(...) snprintf(lexer_current_err, MAX_ERROR_LEN + 1, __VA_ARGS__)
 
 enum lexer_state {
 	state_start,         /* no characters yet */
@@ -24,9 +24,11 @@ FILE *fp;
 enum lexer_ret lexer_init(char *filename) {
 	fp = fopen(filename, "r");
 	if (NULL == fp) {
-		sprintf(current_error, "fopen failed with errno = %d", errno);
+		LEXER_SET_ERROR("fopen failed with errno = %d", errno);
 		return 1;
 	}
+
+	current_line = 1;
 
 	return 0;
 }
@@ -51,7 +53,7 @@ enum lexer_ret lexer_next() {
 		/* Check for error or EOF marker if we didn't read a byte */
 		if (0 == num_read) {
 			if (ferror(fp)) {
-				sprintf(current_error, "fread failed");
+				LEXER_SET_ERROR("fread failed");
 				clearerr(fp);
 				return lexer_ret_fread_fail;
 			}
@@ -84,6 +86,9 @@ enum lexer_ret lexer_next() {
 		case state_start:
 			if (is_eof) {
 				return lexer_ret_eof;
+			}
+			else if (is_ws) {
+				/* do nothing */
 			}
 			else if (':' == read) {
 				cur_state = state_maybe_assign;
@@ -145,7 +150,7 @@ enum lexer_ret lexer_next() {
 				current_lexeme[needle++] = read;
 			}
 			else {
-				LEXER_SET_ERROR("Unexpected character %c while in state_start", read);
+				LEXER_SET_ERROR("Unexpected character '%c' (ord %d) while in state_start", read, read);
 				return lexer_ret_invalid;
 			}
 			break;
@@ -206,6 +211,10 @@ enum lexer_ret lexer_next() {
 					current_token_type = token_type_keyword_then;
 					return lexer_ret_success;
 				}
+				else if (0 == strcmp(current_lexeme, "else")) {
+					current_token_type = token_type_keyword_else;
+					return lexer_ret_success;
+				}
 				else if (0 == strcmp(current_lexeme, "begin")) {
 					current_token_type = token_type_keyword_begin;
 					return lexer_ret_success;
@@ -219,13 +228,13 @@ enum lexer_ret lexer_next() {
 					return lexer_ret_success;
 				}
 				else {
-					LEXER_SET_ERROR("Unknown keyword %s", current_lexeme);
+					LEXER_SET_ERROR("Unknown keyword '%s'", current_lexeme);
 					return lexer_ret_invalid;
 				}
 			}
 			else {
 				current_lexeme[needle] = '\0';
-				LEXER_SET_ERROR("Unexpected character during or after keyword %s: %c", current_lexeme, read);
+				LEXER_SET_ERROR("Unexpected character during or after keyword '%s': '%c' (ord %d)", current_lexeme, read, read);
 				return lexer_ret_invalid;
 			}
 			break;
@@ -276,7 +285,7 @@ enum lexer_ret lexer_next() {
 			}
 			else if (is_alpha) {
 				current_lexeme[needle] = '\0';
-				LEXER_SET_ERROR("Unexpected alpha character '%c' following integer literal '%s'", read, current_lexeme);
+				LEXER_SET_ERROR("Unexpected alpha character '%c' (ord %d) following integer literal '%s'", read, read, current_lexeme);
 				return lexer_ret_invalid;
 			}
 			else {
@@ -311,7 +320,7 @@ enum lexer_ret lexer_next() {
 			}
 			else if (is_alpha) {
 				current_lexeme[needle] = '\0';
-				LEXER_SET_ERROR("Unexpected alpha character '%c' following decimal literal '%s'", read, current_lexeme);
+				LEXER_SET_ERROR("Unexpected alpha character '%c' (ord %d) following decimal literal '%s'", read, read, current_lexeme);
 				return lexer_ret_invalid;
 			}
 			else {

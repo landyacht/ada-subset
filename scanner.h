@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #define MAX_LEXEME_LEN 150
-#define MAX_ERROR_LEN 100
+#define MAX_ERROR_LEN (MAX_LEXEME_LEN + 100)
 
 /* Associate named token types with integer values */
 enum token_type {
@@ -12,6 +12,7 @@ enum token_type {
 	token_type_keyword_is,           /* "is" */
 	token_type_keyword_if,           /* "if" */
 	token_type_keyword_then,         /* "then" */
+	token_type_keyword_else,         /* "else" */
 	token_type_keyword_begin,        /* "begin" */
 	token_type_keyword_end,          /* "end" */
 	token_type_keyword_return,       /* "return" */
@@ -61,8 +62,8 @@ union lexeme_value {
 char current_lexeme[MAX_LEXEME_LEN + 1]; /* 1 byte for null terminator */
 enum token_type current_token_type;
 union lexeme_value current_value;
-char current_error[MAX_ERROR_LEN + 1]; /* 1 byte for null terminator */
-int current_line = 1; /* source file line number, starting at 1 */
+char lexer_current_err[MAX_ERROR_LEN + 1]; /* 1 byte for null terminator */
+int current_line; /* source file line number, starting at 1 */
 
 /*
  * lexer_init - Initialize the lexer (must be called before any other lexer subroutines)
@@ -70,7 +71,7 @@ int current_line = 1; /* source file line number, starting at 1 */
  *   filename - Path to file to be lexed
  * Returns:
  *   lexer_ret_success    - Success
- *   lexer_ret_fopen_fail - Failed to open file (current_error will be set)
+ *   lexer_ret_fopen_fail - Failed to open file (lexer_current_err will be set)
  */
 enum lexer_ret lexer_init(char *filename);
 
@@ -79,8 +80,8 @@ enum lexer_ret lexer_init(char *filename);
  * Returns:
  *   lexer_ret_success    - Success
  *   lexer_ret_eof        - Reached end of file (no lexeme to report)
- *   lexer_ret_fread_fail - Failed to read (current_error will be set)
- *   lexer_ret_invalid    - Invalid token (current_error will be set)
+ *   lexer_ret_fread_fail - Failed to read (lexer_current_err will be set)
+ *   lexer_ret_invalid    - Invalid token (lexer_current_err will be set)
  */
 enum lexer_ret lexer_next();
 
