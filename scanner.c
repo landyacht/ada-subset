@@ -1,3 +1,10 @@
+/*
+Class:       CS 4308 Section 2
+Term:        Fall 2020
+Name:        A. Eubanks, A. Watson, and A. J. Odeyemi
+Instructor:   Deepa Muralidhar
+Project:  Deliverable 1 Scanner - C
+*/
 #include "scanner.h"
 
 #include <stdio.h>
