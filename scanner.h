@@ -43,6 +43,35 @@ enum token_type {
 	token_type_statement_sep         /* Semicolons separating statements */
 };
 
+/* More specific info about certain tokens, namely binary operators
+ * The counter is reset for each token type so these subtypes can fit in 3 bytes
+ *   and be packed with the token type in token_store.c. This is fine since the
+ *   token type will prevent ambiguity between subtypes with the same integer value.
+ */
+enum token_subtype {
+	token_subtype_none = 7,  /* special value for tokens requiring no subtype */
+	/* Multiplicative precedence */
+	token_subtype_times = 0, /* *   */
+	token_subtype_div,       /* /   */
+	token_subtype_mod,       /* mod */
+	token_subtype_rem,       /* rem */
+	/* Additive precedence */
+	token_subtype_plus = 0,  /* +   */
+	token_subtype_minus,     /* -   */
+	token_subtype_concat,    /* &   */
+	/* Relational precedence */
+	token_subtype_eq = 0,    /* =   */
+	token_subtype_gt,        /* >   */
+	token_subtype_lt,        /* <   */
+	token_subtype_neq,       /* /=  */
+	token_subtype_gte,       /* >=  */
+	token_subtype_lte,       /* <=  */
+	/* Logical precedence */
+	token_subtype_and = 0,   /* and */
+	token_subtype_or,        /* or  */
+	token_subtype_xor,       /* xor */
+};
+
 /* Named return codes for lexer_init and lexer_next */
 enum lexer_ret {
 	lexer_ret_success,
@@ -68,6 +97,7 @@ union lexeme_value {
 /* Globals to store current values after a call to next_lexeme */
 char current_lexeme[MAX_LEXEME_LEN + 1]; /* 1 byte for null terminator */
 enum token_type current_token_type;
+enum token_subtype current_token_subtype;
 union lexeme_value current_value;
 char lexer_current_err[MAX_ERROR_LEN + 1]; /* 1 byte for null terminator */
 int current_line; /* source file line number, starting at 1 */

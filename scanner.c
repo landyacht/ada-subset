@@ -132,12 +132,25 @@ enum lexer_ret lexer_next() {
 				current_lexeme[needle++] = read;
 				current_lexeme[needle] = '\0';
 				current_token_type = token_type_binop_additive;
+				switch (read) {
+					case '+': current_token_subtype = token_subtype_plus; break;
+					case '-': current_token_subtype = token_subtype_minus; break;
+					case '&': current_token_subtype = token_subtype_concat; break;
+				}
 				return lexer_ret_success;
 			}
 			else if ('*' == read) { /* / is not included here since it might be part of /= */
 				current_lexeme[needle++] = read;
 				current_lexeme[needle] = '\0';
 				current_token_type = token_type_binop_multiplicative;
+				current_token_subtype = token_subtype_times;
+				return lexer_ret_success;
+			}
+			else if ('=' == read) {
+				current_lexeme[needle++] = read;
+				current_lexeme[needle] = '\0';
+				current_token_type = token_type_binop_relational;
+				current_token_subtype = token_subtype_eq;
 				return lexer_ret_success;
 			}
 			else if ('(' == read || ')' == read) {
@@ -166,11 +179,28 @@ enum lexer_ret lexer_next() {
 				current_lexeme[needle++] = read;
 				current_lexeme[needle] = '\0';
 				current_token_type = token_type_binop_relational;
+				switch (current_lexeme[0]) {
+					case '/': current_token_subtype = token_subtype_neq; break;
+					case '>': current_token_subtype = token_subtype_gte; break;
+					case '<': current_token_subtype = token_subtype_lte; break;
+				}
 				return lexer_ret_success;
 			}
 			else {
 				current_lexeme[needle] = '\0';
-				current_token_type = token_type_binop_relational;
+				if ('/' == current_lexeme[0]) {
+					current_token_type = token_type_binop_multiplicative;
+					current_token_subtype = token_subtype_div;
+				}
+				else {
+					current_token_type = token_type_binop_relational;
+					if ('>' == current_lexeme[0]) {
+						current_token_subtype = token_subtype_gt;
+					}
+					else {
+						current_token_subtype = token_subtype_lt;
+					}
+				}
 				fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
 				return lexer_ret_success;
 			}
@@ -181,7 +211,7 @@ enum lexer_ret lexer_next() {
 			}
 			else {
 				current_lexeme[needle] = '\0';
-				current_token_type = token_type_binop_relational;
+				current_token_type = token_type_identifier;
 				fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
 				return lexer_ret_success;
 			}
@@ -197,9 +227,29 @@ enum lexer_ret lexer_next() {
 				}
 
 				current_lexeme[needle] = '\0';
-				if (   0 == strcmp(current_lexeme, "mod")
-				    || 0 == strcmp(current_lexeme, "rem")) {
+				if (0 == strcmp(current_lexeme, "mod")) {
 					current_token_type = token_type_binop_multiplicative;
+					current_token_subtype = token_subtype_mod;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "rem")) {
+					current_token_type = token_type_binop_multiplicative;
+					current_token_subtype = token_subtype_rem;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "and")) {
+					current_token_type = token_type_binop_logical;
+					current_token_subtype = token_subtype_and;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "or")) {
+					current_token_type = token_type_binop_logical;
+					current_token_subtype = token_subtype_or;
+					return lexer_ret_success;
+				}
+				else if (0 == strcmp(current_lexeme, "xor")) {
+					current_token_type = token_type_binop_logical;
+					current_token_subtype = token_subtype_xor;
 					return lexer_ret_success;
 				}
 				else if (0 == strcmp(current_lexeme, "procedure")) {
