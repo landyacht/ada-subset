@@ -26,3 +26,7 @@ re-defined here.
 				   | 
 <relational_exp> ::= 
 <literal>        ::= <int_lit> | <dec_lit> | <str_lit>
+
+<arithmetic_exp> ::= <term> | <arithmetic_exp> + <term> | <arithmetic_exp> - <term>
+<term> 		 ::= <factor> | <term>  * <factor> | <term> / <factor>
+<factor> 	 ::= <non-negative_integer> | - <factor> | ( <arithmetic_exp> )
