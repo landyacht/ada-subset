@@ -1,32 +1,36 @@
-<ident>, <int_lit>, <dec_lit>, and <str_lit> are all tokens so they won't be
-re-defined here.
+<ident>, <*_lit>, <*_op> are all tokens so they won't be re-defined here.
 
 <program>        ::= <proc_def> ";" <program>
-<proc_def>       ::= "procedure" <id> "is" <var_def_list> "begin" <statement_list> "end" <id> ;
-                   | "procedure" <id> "(" <var_def_list> ")" "is" <var_def_list> "begin" <statement_list> "end"
+                   | <proc_def> ";"
+<proc_def>       ::= "procedure" <ident> "is" <var_def_list> "begin" <stmt_list> "end" <id> ;
+                   | "procedure" <ident> "(" <var_def_list> ")" "is" <var_def_list> "begin" <stmt_list> "end"
 			         <ident>
 <var_def_list>   ::= <ident_list> ":" <ident> ";"
                    | <ident_list> ":" <ident> ";" <var_def_list>
 <ident_list>     ::= <id>
                    | <id> "," <ident_list>
-<statement_list> ::= <statement> ";"
-                   | <statement> ";" <statement_list>
-<statement>      ::= <proc_call>
+<stmt_list>      ::= <stmt> ";"
+                   | <stmt> ";" <stmt_list>
+<stmt>           ::= <proc_call>
                    | <assign>
 				   | <if_stmt>
 <proc_call>      ::= <ident> "(" <arg_list> ")"
 <arg_list>       ::= <logical_exp>
                    | <logical_exp> "," <arg_list>
 <assign>         ::= <ident> ":=" <logical_exp>
-<if_stmt>        ::= "if" <logical_exp> "then" <statement_list> "end" "if"
-                   | "if" <logical_exp> "then" <statement_list> "else"
-				     <statement_list> "end" "if"
+                   | <ident> ":=" <
+<if_stmt>        ::= "if" <logical_exp> "then" <stmt_list> "end" "if"
+                   | "if" <logical_exp> "then" <stmt_list> "else"
+				     <stmt_list> "end" "if"
 <logical_exp>    ::= <relational_exp>
                    | "(" <logical_exp> ")"
-				   | 
-<relational_exp> ::= 
+				   | <logical_exp> <logical_op> <relational_exp>
+<relational_exp> ::= <arithmetic_exp> <relational_op> <arithmetic_exp>
+<arithmetic_exp> ::= <term>
+                   | <arithmetic_exp> <additive_op> <term>
+<term>           ::= <factor>
+				   | <term> <multiplicative_op> <factor>
+<factor>         ::= <literal>
+                   | "(" <arithmetic_exp> ")"
+				   | "-" <factor>
 <literal>        ::= <int_lit> | <dec_lit> | <str_lit>
-
-<arithmetic_exp> ::= <term> | <arithmetic_exp> + <term> | <arithmetic_exp> - <term>
-<term> 		 ::= <factor> | <term>  * <factor> | <term> / <factor>
-<factor> 	 ::= <non-negative_integer> | - <factor> | ( <arithmetic_exp> )
