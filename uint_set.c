@@ -35,11 +35,16 @@ enum uis_ret uint_set_copy(struct uint_set *dest, struct uint_set *orig) {
 	
 	uint8_t *buckets_dest = calloc(sizeof(uint8_t), orig->num_buckets),
 	        *buckets_orig = orig->buckets;
+	if (NULL == buckets_dest) {
+		return uis_ret_alloc_fail;
+	}
 	for (uint16_t i = 0; i < num_buckets; i++) {
 		buckets_dest[i] = buckets_orig[i];
 	}
 
 	dest->buckets = buckets_dest;
+
+	return uis_ret_success;
 }
 
 enum uis_ret uint_set_add(struct uint_set *uis, uint16_t value) {
