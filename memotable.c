@@ -2,15 +2,11 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+#include <stdio.h>
+
 #include "memotable.h"
 #include "uint_set.h"
 
-struct memotable_entry {
-	size_t key;
-	int call_count;
-	struct uint_set *value;
-	struct memotable_entry *next;
-};
 
 /* _memotable_find_or_next - Internal routine for finding a key or getting the next free slot
  * Parameters:
@@ -37,8 +33,8 @@ enum mt_ret _memotable_find_or_next(
 
 	/* First, attempt quadratic probing, number of probes proportional to size */
 	for (int i = 0; i < tbl_size; i *= 2) {
-		struct memotable_entry *current = array + (modulus + i) % table->size;
-
+		struct memotable_entry *current = array + (modulus + i) % tbl_size;
+		
 		if (current->call_count == -1) {
 			if (create) {
 				current->call_count = 0;
@@ -99,7 +95,7 @@ enum mt_ret memotable_create(struct memotable *table, size_t size) {
 	table->size = size;
 	struct memotable_entry *array = calloc(sizeof(struct memotable_entry), size);
 
-	if (NULL == table->array) {
+	if (NULL == array) {
 		return mt_ret_alloc_fail;
 	}
 
@@ -119,7 +115,11 @@ enum mt_ret memotable_inc_ct(struct memotable *table, size_t index, int *ct_out)
 		return mt_ret_alloc_fail;
 	}
 
-	*ct_out = ++entry->call_count;
+	(entry->call_count)++;
+	if (NULL != ct_out) {
+		*ct_out = entry->call_count;
+	}
+
 	return mt_ret_success;
 }
 
@@ -140,7 +140,8 @@ enum mt_ret memotable_store(struct memotable *table, size_t index, struct uint_s
 		return mt_ret_alloc_fail;
 	}
 
-	if (uis_ret_alloc_fail == uint_set_copy(entry->value, value)) {
+	
+	if (uis_ret_alloc_fail == uint_set_copy(&(entry->value), value)) {
 		return mt_ret_alloc_fail;
 	}
 
@@ -153,7 +154,11 @@ enum mt_ret memotable_get_val(struct memotable *table, size_t index, struct uint
 		return mt_ret_not_found;
 	}
 
-	if (uis_ret_alloc_fail == uint_set_copy(value_out, entry->value)) {
+	if (0 == entry->value.max) {
+		return mt_ret_not_found;
+	}
+
+	if (uis_ret_alloc_fail == uint_set_copy(value_out, &(entry->value))) {
 		return mt_ret_alloc_fail;
 	}
 
@@ -161,13 +166,21 @@ enum mt_ret memotable_get_val(struct memotable *table, size_t index, struct uint
 }
 
 void memotable_destroy(struct memotable *table) {
-	/* First deallocate any chained entries */
+	/* First deallocate any chained entries and uint_sets */
 	size_t tbl_size = table->size;
 	struct memotable_entry *tbl_array = table->array;
 	for (size_t i = 0; i < tbl_size; i++) {
-		struct memotable_entry *cur = tbl_array[i].next;
+		struct memotable_entry this_entry = tbl_array[i];
+		if (0 != this_entry.value.max) {
+			uint_set_destroy(&(this_entry.value));
+		}
+
+		struct memotable_entry *cur = this_entry.next;
 		while (NULL != cur) {
 			struct memotable_entry *next = cur->next;
+			if (0 != cur->value.max) {
+				uint_set_destroy(&(cur->value));
+			}
 			free(cur);
 			cur = next;
 		}

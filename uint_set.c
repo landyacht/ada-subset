@@ -3,12 +3,6 @@
 
 #include "uint_set.h"
 
-struct uint_set {
-	uint16_t max;
-	uint16_t num_buckets;
-	uint8_t *buckets;
-};
-
 enum uis_ret uint_set_create(struct uint_set *uis_out, uint16_t max) {
 	/* We add one to max since we need enough space for zero up to and including it */
 	uint16_t num_buckets = (max + 1) / 8;

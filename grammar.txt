@@ -4,7 +4,7 @@
                    | <proc_def> ";"
 <proc_def>       ::= "procedure" <ident> "is" <var_def_list> "begin" <stmt_list> "end" <id> ;
                    | "procedure" <ident> "(" <var_def_list> ")" "is" <var_def_list> "begin" <stmt_list> "end"
-			         <ident>
+                     <ident>
 <var_def_list>   ::= <ident_list> ":" <ident> ";"
                    | <ident_list> ":" <ident> ";" <var_def_list>
 <ident_list>     ::= <id>
@@ -13,24 +13,24 @@
                    | <stmt> ";" <stmt_list>
 <stmt>           ::= <proc_call>
                    | <assign>
-				   | <if_stmt>
+                   | <if_stmt>
 <proc_call>      ::= <ident> "(" <arg_list> ")"
 <arg_list>       ::= <logical_exp>
                    | <logical_exp> "," <arg_list>
 <assign>         ::= <ident> ":=" <logical_exp>
-                   | <ident> ":=" <
+                   | <ident> ":=" <arithmetic_exp>
 <if_stmt>        ::= "if" <logical_exp> "then" <stmt_list> "end" "if"
                    | "if" <logical_exp> "then" <stmt_list> "else"
-				     <stmt_list> "end" "if"
+                     <stmt_list> "end" "if"
 <logical_exp>    ::= <relational_exp>
                    | "(" <logical_exp> ")"
-				   | <logical_exp> <logical_op> <relational_exp>
+                   | <logical_exp> <logical_op> <relational_exp>
 <relational_exp> ::= <arithmetic_exp> <relational_op> <arithmetic_exp>
 <arithmetic_exp> ::= <term>
                    | <arithmetic_exp> <additive_op> <term>
 <term>           ::= <factor>
-				   | <term> <multiplicative_op> <factor>
+                   | <term> <multiplicative_op> <factor>
 <factor>         ::= <literal>
                    | "(" <arithmetic_exp> ")"
-				   | "-" <factor>
+                   | "-" <factor>
 <literal>        ::= <int_lit> | <dec_lit> | <str_lit>

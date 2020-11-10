@@ -3,7 +3,11 @@
 
 #include <stdint.h>
 
-struct uint_set;
+struct uint_set {
+        uint16_t max;
+        uint16_t num_buckets;
+        uint8_t *buckets;
+};
 
 enum uis_ret {
 	uis_ret_success,

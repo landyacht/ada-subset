@@ -6,6 +6,35 @@
 #include "scanner.h"
 
 
+/* Each left-hand side may have more than one right-hand side */
+enum node_variation {
+	/* For list-type nodes such as node_program, node_stmt_list, etc. */
+	nv_partial,
+	nv_last,
+
+	/* For procedures, which may or may not have parameters */
+	nv_noparams,
+	nv_withparams,
+
+	/* For statements */
+	nv_call_stmt,
+	nv_assign_stmt,
+	nv_if_stmt,
+
+	/* For assignments */
+	nv_logical_assign,
+	nv_arithmetic_assign,
+
+	/* For if statements */
+	nv_if_noelse,
+	nv_if_withelse,
+
+	/* For expressions */
+	nv_exp_parenthesized,
+	nv_exp_simple,
+	nv_exp_complex
+};
+
 /* Pre-declarations */
 struct node_program;
 struct node_proc_def;

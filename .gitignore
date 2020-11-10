@@ -60,6 +60,5 @@ dkms.conf
 # Vim swap file
 *.swp
 
-# Our executables
-scanner_test
-parser_test
+# Our testing executables
+*_test

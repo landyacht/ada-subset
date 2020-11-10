@@ -11,7 +11,13 @@ enum mt_ret {
 	mt_ret_not_found,
 };
 
-struct memotable_entry;
+struct memotable_entry {
+        size_t key;
+        int call_count;
+        struct uint_set value;
+        struct memotable_entry *next;
+};
+
 struct memotable {
 	size_t size;
 	struct memotable_entry *array;
