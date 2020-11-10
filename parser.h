@@ -146,7 +146,7 @@ struct node_factor {
 struct node_literal {
 	enum token_type val_type;
 	union lexeme_value val;
-}
+};
 
 /* Do the parse */
 struct node_program *parse(char *filename);
