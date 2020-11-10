@@ -22,6 +22,18 @@ enum uis_ret uint_set_create(struct uint_set *uis_out, uint16_t max) {
 	return uis_ret_success;
 }
 
+int uint_set_isempty(struct uint_set *uis) {
+	uint16_t num_buckets = uis->num_buckets;
+	uint8_t buckets = uis->buckets;
+	for (uint16_t i = 0; i < num_buckets; i++) {
+		if (buckets[i]) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+
 enum uis_ret uint_set_copy(struct uint_set *dest, struct uint_set *orig) {
 	dest->max = orig->max;
 	uint16_t num_buckets = orig->num_buckets;

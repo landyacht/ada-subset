@@ -27,6 +27,8 @@ enum uis_ret {
  */
 enum uis_ret uint_set_create(struct uint_set *uis_out, uint16_t max);
 
+int uint_set_isempty(struct uint_set *uis);
+
 /* uint_set_copy - Create a copy of a set
  * Parameters:
  *   dest - Pointer to a struct to be filled with the copy

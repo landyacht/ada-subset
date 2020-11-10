@@ -7,9 +7,6 @@
 
 #define TS_INITIAL_SIZE 25
 
-/* A convenient constant for tokens with no associated value */
-const union lexeme_value ts_no_value = { .val_dec = NAN };
-
 /* Named return codes */
 enum ts_ret {
 	ts_ret_success,

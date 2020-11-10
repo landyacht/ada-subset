@@ -2,6 +2,7 @@
 
 <program>        ::= <proc_def> ";" <program>
                    | <proc_def> ";"
+                   | EMPTY
 <proc_def>       ::= "procedure" <ident> "is" <var_def_list> "begin" <stmt_list> "end" <id> ;
                    | "procedure" <ident> "(" <var_def_list> ")" "is" <var_def_list> "begin" <stmt_list> "end"
                      <ident>
