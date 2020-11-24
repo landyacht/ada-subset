@@ -220,9 +220,9 @@ enum lexer_ret lexer_next() {
 			if (is_alpha_lc) {
 				current_lexeme[needle++] = read;
 			}
-			/* whitespace or a unary operator may follow a keyword */
-			else if (is_ws || '-' == read || '+' == read) {
-				if ('-' == read || '+' == read) {
+			/* whitespace, a unary operator, or a semicolon may follow a keyword */
+			else if (is_ws || '-' == read || '+' == read || ';' == read) {
+				if ('-' == read || '+' == read || ';' == read) {
 					fseek(fp, -1L, SEEK_CUR); /* move back to prep for next call */
 				}
 

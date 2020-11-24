@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "uint_set.h"
 
@@ -22,16 +23,32 @@ enum uis_ret uint_set_create(struct uint_set *uis_out, uint16_t max) {
 	return uis_ret_success;
 }
 
-int uint_set_isempty(struct uint_set *uis) {
+enum uis_ret uint_set_isempty(struct uint_set *uis) {
 	uint16_t num_buckets = uis->num_buckets;
-	uint8_t buckets = uis->buckets;
+	uint8_t *buckets = uis->buckets;
 	for (uint16_t i = 0; i < num_buckets; i++) {
 		if (buckets[i]) {
-			return 0;
+			return uis_ret_false;
 		}
 	}
 
-	return 1;
+	return uis_ret_true;
+}
+
+int uint_set_max(struct uint_set *uis) {
+	uint8_t *buckets = uis->buckets;
+	for (uint16_t i = uis->num_buckets; i > 0; i--) {
+		uint8_t bucket = buckets[i - 1];
+		if (0 != bucket) {
+			for (int j = 7; j >= 0; j--) {
+				if (bucket & 1 << j) {
+					return 8 * (i - 1) + j;
+				}
+			}
+		}
+	}
+
+	return -1;
 }
 
 enum uis_ret uint_set_copy(struct uint_set *dest, struct uint_set *orig) {
@@ -53,19 +70,40 @@ enum uis_ret uint_set_copy(struct uint_set *dest, struct uint_set *orig) {
 	return uis_ret_success;
 }
 
+void uint_set_clear(struct uint_set *uis) {
+	uint16_t num_buckets = uis->num_buckets;
+	uint8_t *buckets = uis->buckets;
+	for (uint16_t i = 0; i < num_buckets; i++) {
+		buckets[i] = 0;
+	}
+}
+
 enum uis_ret uint_set_add(struct uint_set *uis, uint16_t value) {
 	if (value > uis->max) {
 		return uis_ret_oob;
 	}
 
 	/* Get the byte in which the associated bit lies */
-	uint8_t bucket_idx = value / 8;
+	uint16_t bucket_idx = value / 8;
 
 	/* Lowest-order bit is associated with the first value in the bucket */
 	uint8_t mask = 1 << (value % 8);
 
 	/* OR to flip the correct bit */
 	uis->buckets[bucket_idx] |= mask;
+
+	return uis_ret_success;
+}
+
+enum uis_ret uint_set_remove(struct uint_set *uis, uint16_t value) {
+	if (value > uis->max) {
+		return uis_ret_oob;
+	}
+
+	uint16_t bucket_idx = value / 8;
+	uint8_t mask = ~(1 << (value % 8));
+
+	uis->buckets[bucket_idx] &= mask;
 
 	return uis_ret_success;
 }

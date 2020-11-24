@@ -35,6 +35,11 @@ int main() {
 	printf("Should contain 1, 2, 3, 4, 5, 6, 8, 10: ");
 	print_uis(&otf_copy);
 	
+	printf("Should be 10: %d\n", uint_set_max(&otf_copy));
+	printf("Should be 4: %d\n", uint_set_max(&one_to_five));
+	struct uint_set empty;
+	uint_set_create(&empty, 50);
+	printf("Should be -1: %d\n", uint_set_max(&empty));
 
 	return 0;
 }

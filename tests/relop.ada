@@ -1,9 +1,11 @@
-procedure RelationalOp (X, Y: Integer;) is
+procedure RelationalOp is
+    X, Y: Integer;
 begin
-    X := 5
-    Y := 2
+    X := 5;
+    Y := 2;
     if X > Y then
-        return True
+        return 1;
     else
-        return False
+        return 0;
+	end if;
 end RelationalOp;

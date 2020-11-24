@@ -27,7 +27,17 @@ enum uis_ret {
  */
 enum uis_ret uint_set_create(struct uint_set *uis_out, uint16_t max);
 
-int uint_set_isempty(struct uint_set *uis);
+/* uint_set_isempty - Check if this set contains no elements
+ * Returns:
+ *   uis_ret_false - The set is non-empty
+ *   uis_ret_true  - The set is empty
+ */
+enum uis_ret uint_set_isempty(struct uint_set *uis);
+
+/* uint_set_max - Find the greatest value in the set
+ * Returns: Greatest value in the set, or -1 if the set is empty
+ */
+int uint_set_max(struct uint_set *uis);
 
 /* uint_set_copy - Create a copy of a set
  * Parameters:
@@ -39,6 +49,9 @@ int uint_set_isempty(struct uint_set *uis);
  */
 enum uis_ret uint_set_copy(struct uint_set *dest, struct uint_set *orig);
 
+/* uint_set_clear - Remove all elements from the set */
+void uint_set_clear(struct uint_set *uis);
+
 /* uint_set_add - Add an integer to the set
  * Parameters:
  *   uis   - Pointer to the uint_set struct
@@ -48,6 +61,16 @@ enum uis_ret uint_set_copy(struct uint_set *dest, struct uint_set *orig);
  *   uis_ret_oob     - value was out of bounds
  */
 enum uis_ret uint_set_add(struct uint_set *uis, uint16_t value);
+
+/* uint_set_remove - Remove an integer from the set
+ * Paramters:
+ *   uis - Pointer to the uint_set struct
+ *   value - Integer to be removed
+ * Returns:
+ *   uis_ret_success - Success
+ *   uis_ret_oob     - 
+ */
+enum uis_ret uint_set_remove(struct uint_set *uis, uint16_t value);
 
 /* uint_set_contains - Check if the set contains a value
  * Parameters:

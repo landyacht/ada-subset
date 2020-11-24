@@ -136,16 +136,30 @@ int memotable_get_ct(struct memotable *table, size_t index) {
 
 enum mt_ret memotable_store(struct memotable *table, size_t index, struct uint_set *value) {
 	struct memotable_entry *entry;
-	if (mt_ret_alloc_fail == _memotable_find_or_next(table, index, true, &entry)) {
+	switch (_memotable_find_or_next(table, index, true, &entry)) {
+	case mt_ret_alloc_fail:
 		return mt_ret_alloc_fail;
+	case mt_ret_success:
+		if (0 == entry->value.max) {
+			if (uis_ret_alloc_fail == uint_set_copy(&(entry->value), value)) {
+				return mt_ret_alloc_fail;
+			}
+			else {
+				return mt_ret_success;
+			}
+		}
+		else {
+			uint_set_union_with(&(entry->value), value);
+			return mt_ret_success;
+		}
+	case mt_ret_not_found:
+		if (uis_ret_alloc_fail == uint_set_copy(&(entry->value), value)) {
+			return mt_ret_alloc_fail;
+		}
+		else {
+			return mt_ret_success;
+		}
 	}
-
-	
-	if (uis_ret_alloc_fail == uint_set_copy(&(entry->value), value)) {
-		return mt_ret_alloc_fail;
-	}
-
-	return mt_ret_success;
 }
 
 enum mt_ret memotable_get_val(struct memotable *table, size_t index, struct uint_set *value_out) {
@@ -161,7 +175,7 @@ enum mt_ret memotable_get_val(struct memotable *table, size_t index, struct uint
 	if (uis_ret_alloc_fail == uint_set_copy(value_out, &(entry->value))) {
 		return mt_ret_alloc_fail;
 	}
-
+	
 	return mt_ret_success;
 }
 

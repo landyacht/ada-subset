@@ -30,7 +30,6 @@ enum token_type {
 	token_type_identifier,           /* Identifiers such as variable & procedure names, type names */
 	token_type_lit_int,              /* Integer literal */
 	token_type_lit_dec,              /* Decimal (floating point) literal */
-	token_type_lit_bool,             /* Boolean literal */
 	token_type_lit_str,              /* String literal */
 	/* The following operators listed in order of decreasing precedence */
 	token_type_unop_not,             /* Logical negation (not) */

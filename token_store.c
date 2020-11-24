@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "token_store.h"
 #include "scanner.h"
@@ -40,9 +41,12 @@ enum ts_ret token_store_add(
 
 	/* The type goes in the 5 high bits and the subtype goes in the 3 low bits */
 	uint8_t type_packed = (uint8_t) (type << 3 | subtype);
-	tokens[needle++] = type_packed;
+	tokens[needle] = type_packed;
+	values[needle] = value;
 
-	values[needle++] = value;
+	needle++;
+
+	return ts_ret_success;
 }
 
 enum ts_ret token_store_get(
@@ -51,6 +55,10 @@ enum ts_ret token_store_get(
 		enum token_subtype *subtype_out,
 		union lexeme_value *value_out
 ) {
+	if (i >= needle) {
+		return ts_ret_oob;
+	}
+
 	/* At least one of the pieces of token type information is requested */
 	if (NULL != type_out || NULL != subtype_out) {
 		uint8_t type_packed = tokens[i];
@@ -65,6 +73,8 @@ enum ts_ret token_store_get(
 	if (NULL != value_out) {
 		*value_out = values[i];
 	}
+
+	return ts_ret_success;
 }
 
 void token_store_deinit() {

@@ -3,9 +3,10 @@
 <program>        ::= <proc_def> ";" <program>
                    | <proc_def> ";"
                    | EMPTY
-<proc_def>       ::= "procedure" <ident> "is" <var_def_list> "begin" <stmt_list> "end" <id> ;
-                   | "procedure" <ident> "(" <var_def_list> ")" "is" <var_def_list> "begin" <stmt_list> "end"
+<proc_def>       ::= "procedure" <ident> "is" <var_def_list> ";" "begin" <stmt_list> "end" <ident>
+                   | "procedure" <ident> "(" <var_def_list> ")" "is" <var_def_list> ";" "begin" <stmt_list> "end"
                      <ident>
+                   | "procedure" <ident> "(" <var_def_list> ")" "is" "begin" <stmt_list> "end" <ident>
 <var_def_list>   ::= <ident_list> ":" <ident> ";"
                    | <ident_list> ":" <ident> ";" <var_def_list>
 <ident_list>     ::= <id>
@@ -15,23 +16,29 @@
 <stmt>           ::= <proc_call>
                    | <assign>
                    | <if_stmt>
+                   | <return_stmt>
 <proc_call>      ::= <ident> "(" <arg_list> ")"
 <arg_list>       ::= <logical_exp>
+                   | <arithmetic_exp>
                    | <logical_exp> "," <arg_list>
+                   | <arithmetic_exp "," <arg_list>
 <assign>         ::= <ident> ":=" <logical_exp>
                    | <ident> ":=" <arithmetic_exp>
 <if_stmt>        ::= "if" <logical_exp> "then" <stmt_list> "end" "if"
-                   | "if" <logical_exp> "then" <stmt_list> "else"
-                     <stmt_list> "end" "if"
+                   | "if" <logical_exp> "then" <stmt_list> "else" <stmt_list> "end" "if"
+<return_stmt>    ::= "return" <logical_exp>
+                   | "return" <arithmetic_exp>
 <logical_exp>    ::= <relational_exp>
                    | "(" <logical_exp> ")"
                    | <logical_exp> <logical_op> <relational_exp>
 <relational_exp> ::= <arithmetic_exp> <relational_op> <arithmetic_exp>
+                   | <value>
 <arithmetic_exp> ::= <term>
                    | <arithmetic_exp> <additive_op> <term>
 <term>           ::= <factor>
                    | <term> <multiplicative_op> <factor>
-<factor>         ::= <literal>
+<factor>         ::= <value>
                    | "(" <arithmetic_exp> ")"
                    | "-" <factor>
+<value>          ::= <literal> | <ident>
 <literal>        ::= <int_lit> | <dec_lit> | <str_lit>
