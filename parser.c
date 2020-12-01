@@ -76,7 +76,7 @@ struct uint_set rule_value(int);
 	uint_set_destroy(&copy); \
 }
 
-int *parse(char *filename) {
+enum parser_ret parse(char *filename) {
 	if (lexer_ret_fopen_fail == lexer_init(filename)) {
 		printf("fopen() failed while initializing lexer: %s\n", lexer_current_err);
 		return parser_ret_open_fail;
@@ -219,7 +219,7 @@ struct uint_set rule_proc_def(int j) {
 
 struct uint_set rule_var_def_list(int j) {
 #ifdef PARSER_DEBUG
-	printf("rule_var_def visited, j = %d\n", j);
+	printf("rule_var_def_list visited, j = %d\n", j);
 #endif
 
 	CHECK_MEMOTABLE(VAR_DEF_LIST_MT)

@@ -65,8 +65,7 @@ struct node_program {
 
 struct node_proc_def {
 	enum node_variation variation;
-	struct node_ident        *name,
-	                         *end_name;
+	struct node_ident        *name;
 	struct node_var_def_list *param_list;
 	struct node_var_def_list *var_decls;
 	struct node_stmt_list    *instructions;

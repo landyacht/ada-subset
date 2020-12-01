@@ -1,6 +1,7 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include "memotable.h"
 int token_count;
 
 #define NUM_RULES 17
