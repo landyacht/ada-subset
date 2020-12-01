@@ -1,154 +1,49 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include <stdint.h>
+int token_count;
 
-#include "scanner.h"
+#define NUM_RULES 17
+struct memotable memotables[NUM_RULES];
+#define PROGRAM_MT          memotables[0]
+#define PROC_DEF_MT         memotables[1]
+#define VAR_DEF_LIST_MT     memotables[2]
+#define IDENT_LIST_MT       memotables[3]
+#define STMT_LIST_MT        memotables[4]
+#define STMT_MT             memotables[5]
+#define PROC_CALL_MT        memotables[6]
+#define ARG_LIST_MT         memotables[7]
+#define ASSIGN_MT           memotables[8]
+#define IF_STMT_MT          memotables[9]
+#define RETURN_STMT_MT      memotables[10]
+#define LOGICAL_EXP_MT      memotables[11]
+#define RELATIONAL_EXP_MT   memotables[12]
+#define ARITHMETIC_EXP_MT   memotables[13]
+#define TERM_MT             memotables[14]
+#define FACTOR_MT           memotables[15]
+#define VALUE_MT            memotables[16]
 
-
-/* Each left-hand side may have more than one right-hand side */
-enum node_variation {
-	/* For list-type nodes such as node_program, node_stmt_list, etc. */
-	nv_partial,
-	nv_last,
-
-	/* For procedures, which may or may not have parameters */
-	nv_noparams,
-	nv_withparams,
-
-	/* For statements */
-	nv_call_stmt,
-	nv_assign_stmt,
-	nv_if_stmt,
-
-	/* For assignments */
-	nv_logical_assign,
-	nv_arithmetic_assign,
-
-	/* For if statements */
-	nv_if_noelse,
-	nv_if_withelse,
-
-	/* For expressions */
-	nv_exp_parenthesized,
-	nv_exp_simple,
-	nv_exp_complex
+enum parser_ret {
+	parser_ret_open_fail,
+	parser_ret_alloc_fail,
+	parser_ret_read_fail,
+	parser_ret_lex_fail,
+	parser_ret_success,
+	parser_ret_partial
 };
 
-/* Pre-declarations */
-struct node_program;
-struct node_proc_def;
-struct node_var_def_list;
-struct node_ident_list;
-struct node_ident;
-struct node_stmt_list;
-struct node_stmt;
-struct node_proc_call;
-struct node_arg_list;
-struct node_logical_exp;
-struct node_relational_exp;
-struct node_arithmetic_exp;
-struct node_term;
-struct node_factor;
-struct node_literal;
-
-/* Structs for each kind of node in the parse tree */
-struct node_program {
-	enum node_variation variation;
-	struct node_proc_def *proc;
-	struct node_program  *more;
-};
-
-struct node_proc_def {
-	enum node_variation variation;
-	struct node_ident        *name;
-	struct node_var_def_list *param_list;
-	struct node_var_def_list *var_decls;
-	struct node_stmt_list    *instructions;
-};
-
-struct node_var_def_list {
-	enum node_variation variation;
-	struct node_ident_list   *var_names;
-	struct node_ident        *type_name;
-	struct node_var_def_list *more;
-};
-
-struct node_ident_list {
-	enum node_variation variation;
-	struct node_ident      *ident;
-	struct node_ident_list *more;
-};
-
-struct node_ident {
-	char *name;
-};
-
-struct node_stmt_list {
-	enum node_variation variation;
-	struct node_stmt      *stmt;
-	struct node_stmt_list *more;
-};
-
-struct node_stmt {
-	enum node_variation variation;
-	struct node_proc_call *proc_call;
-	struct node_assign    *assignment;
-	struct node_if_stmt   *if_stmt;
-};
-
-struct node_proc_call {
-	struct node_ident    *proc_name;
-	struct node_arg_list *arguments;
-};
-
-struct node_arg_list {
-	enum node_variation variation;
-	struct node_logical_exp *arg;
-	struct node_arg_list    *more;
-};
-
-struct node_logical_exp {
-	enum node_variation variation;
-	struct node_relational_exp *rel_exp;
-	struct node_logical_exp    *inner_exp;
-	enum token_subtype          op;
-};
-
-struct node_relational_exp {
-	enum node_variation variation;
-	struct node_arithmetic_exp *lhs,
-	                           *rhs;
-	enum token_subtype          op;
-};
-
-struct node_arithmetic_exp {
-	enum node_variation variation;
-	struct node_term           *term;
-	struct node_arithmetic_exp *lhs;
-	enum token_subtype          op;
-};
-
-struct node_term {
-	enum node_variation variation;
-	struct node_factor *factor;
-	struct node_term   *lhs;
-	enum token_subtype  op;
-};
-
-struct node_factor {
-	enum node_variation variation;
-	struct node_literal        *literal;
-	struct node_arithmetic_exp *inner_exp;
-	struct node_factor         *neg_factor;
-};
-
-struct node_literal {
-	enum token_type val_type;
-	union lexeme_value val;
-};
-
-/* Do the parse */
-struct node_program *parse(char *filename);
+/* parse - attempt to parse the specified file, gathering all information necessary
+ *         for parse tree construction in the memotables
+ * Parameters:
+ *   filename - The file to be parsed
+ * Returns:
+ *   parser_ret_open_fail  - The lexer failed to open the file
+ *   parser_ret_alloc_fail - Somewhere we failed to allocate memory
+ *   parser_ret_read_fail  - The lexer failed to read the file
+ *   parser_ret_lex_fail   - The lexer encountered malformed input
+ *   parser_ret_success    - The whole file was traversed in the parse
+ *   parser_ret_partial    - Only part of the file was traversed in the parse
+ */
+enum parser_ret parse(char *filename);
 
 #endif

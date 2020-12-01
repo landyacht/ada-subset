@@ -9,29 +9,6 @@
 #include "scanner.h"
 #include "token_store.h"
 
-int token_count;
-
-#define NUM_RULES 17
-struct memotable memotables[NUM_RULES];
-#define PROGRAM_MT          memotables[0]
-#define PROC_DEF_MT         memotables[1]
-#define VAR_DEF_LIST_MT     memotables[2]
-#define IDENT_LIST_MT       memotables[3]
-#define STMT_LIST_MT        memotables[4]
-#define STMT_MT             memotables[5]
-#define PROC_CALL_MT        memotables[6]
-#define ARG_LIST_MT         memotables[7]
-#define ASSIGN_MT           memotables[8]
-#define IF_STMT_MT          memotables[9]
-#define RETURN_STMT_MT      memotables[10]
-#define LOGICAL_EXP_MT      memotables[11]
-#define RELATIONAL_EXP_MT   memotables[12]
-#define ARITHMETIC_EXP_MT   memotables[13]
-#define TERM_MT             memotables[14]
-#define FACTOR_MT           memotables[15]
-#define VALUE_MT            memotables[16]
-	
-
 struct uint_set rule_program(int);
 struct uint_set rule_proc_def(int);
 struct uint_set rule_var_def_list(int);
@@ -99,15 +76,15 @@ struct uint_set rule_value(int);
 	uint_set_destroy(&copy); \
 }
 
-struct node_program *parse(char *filename) {
+int *parse(char *filename) {
 	if (lexer_ret_fopen_fail == lexer_init(filename)) {
 		printf("fopen() failed while initializing lexer: %s\n", lexer_current_err);
-		return NULL;
+		return parser_ret_open_fail;
 	}
 
 	if (ts_ret_alloc_fail == token_store_init()) {
 		printf("Token store failed to initialize due to memory allocation issues!\n");
-		return NULL;
+		return parser_ret_alloc_fail;
 	}
 
 	printf("Reading and storing tokens... \n");
@@ -124,15 +101,15 @@ struct node_program *parse(char *filename) {
 			}
 			if (ts_ret_alloc_fail == token_store_add(current_token_type, current_token_subtype, current_value)) {
 				puts("Token store failed to allocate memory!");
-				return NULL;
+				return parser_ret_alloc_fail;
 			}
 			break;
 		case lexer_ret_fread_fail:
 			printf("Lexer failed to read the file: %s\n", lexer_current_err);
-			return NULL;
+			return parser_ret_read_fail;
 		case lexer_ret_invalid:
 			printf("Lexer encountered malformed input: %s\n", lexer_current_err);
-			return NULL;
+			return parser_ret_lex_fail;
 		case lexer_ret_eof:
 			keep_going = false;
 			break;
@@ -142,15 +119,19 @@ struct node_program *parse(char *filename) {
 	/* Set up memotables */
 	size_t mt_size = token_count / 6;
 	for (int i = 0; i < NUM_RULES; i++) {
-		memotable_create(&memotables[i], mt_size);
+		enum mt_ret create_rv = memotable_create(&memotables[i], mt_size);
+		if (mt_ret_alloc_fail == create_rv) {
+			printf("Failed to allocate memory for memotable %d\n", i);
+			return parser_ret_alloc_fail;
+		}
 	}
 
-	rule_program(0);
+	struct uint_set result = rule_program(0);
+	if (uis_ret_true == uint_set_contains(&result, token_count)) {
+		return parser_ret_success;
+	}
 
-	/* TODO */
-	struct node_program *parsetree = NULL;
-
-	return parsetree;
+	return parser_ret_partial;
 }
 
 struct uint_set rule_program(int j) {
