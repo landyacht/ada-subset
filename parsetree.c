@@ -11,7 +11,7 @@
 
 #define UIS_MAX_IN_BOUND(out, set, bound) \
 	for (int i = bound; i >= j; i--) { \
-		if (uis_ret_true == uis_contains(&set, i)) { \
+		if (uis_ret_true == uint_set_contains(&set, i)) { \
 			out = i; \
 			break; \
 		} \
@@ -19,7 +19,7 @@
 
 #define UIS_MIN_IN_BOUND(out, set, bound) \
 	for (int i = j; i <= bound; i++) { \
-		if (uis_ret_true == uis_contains(&set, i)) { \
+		if (uis_ret_true == uint_set_contains(&set, i)) { \
 			out = i; \
 			break; \
 		} \
@@ -62,9 +62,12 @@ struct node_var_def_list    *build_var_def_list(int, int, int*);
 struct node_ident_list      *build_ident_list(int, int);
 struct node_ident           *build_ident(int);
 struct node_stmt_list       *build_stmt_list(int, int, int*);
-struct node_stmt            *build_stmt(int, int, int*);
-struct node_proc_call       *build_proc_call(int, int, int*);
-struct node_arg_list        *build_arg_list(int, int, int*);
+struct node_stmt            *build_stmt(int, int);
+struct node_proc_call       *build_proc_call(int, int);
+struct node_assignment      *build_assignment(int, int);
+struct node_if_stmt         *build_if_stmt(int, int);
+struct node_return          *build_return(int, int);
+struct node_arg_list        *build_arg_list(int, int);
 struct node_logical_exp     *build_logical_exp(int, int, int*);
 struct node_relational_exp  *build_relational_exp(int, int, int*);
 struct node_arithmetic_exp  *build_arithmetic_exp(int, int, int*);
@@ -137,20 +140,10 @@ struct node_proc_def *build_proc_def(int j, int bound) {
 	result->instructions = build_stmt_list(resume_at + 1, bound - 2, NULL);
 
 	if (has_params) {
-		if (has_decls) {
-			result->variation = nv_withparams_withdecls;
-		}
-		else {
-			result->variation = nv_withparams_nodecls;
-		}
+		result->variation |= nv_withparams;
 	}
-	else {
-		if (has_decls) {
-			result->variation = nv_noparams_withdecls;
-		}
-		else {
-			result->variation = nv_noparams_nodecls;
-		}
+	if (has_decls) {
+		result->variation |= nv_withdecls;
 	}
 
 	CHECK_FAIL
@@ -182,14 +175,9 @@ struct node_var_def_list *build_var_def_list(int j, int bound, int *resume_out) 
 	result->var_names = build_ident_list(j, this_bound - 3);
 
 	result->more = build_var_def_list(this_bound, bound, NULL);
-	if (NULL == result->more) { 
-		result->variation = nv_last;
-	}
-	else {
-		result->variation = nv_partial;
-	}
+	result->variation = NULL == result->more ? nv_last : nv_partial;
 
-	return result;
+	CHECK_FAIL
 }
 
 struct node_ident_list build_ident_list(int j, int bound) {
@@ -231,8 +219,274 @@ struct node_stmt_list *build_stmt_list(int j, int bound, int *resume_out) {
 	printf("build_stmt_list called, j = %d, bound = %d\n", j, bound);
 #endif
 
-	
+	if (j == bound) {
+		return NULL;
+	}
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, STMT_LIST_MT, j)
+
+	/* Tighten bound */
+	if (NULL != resume_out) {
+		UIS_MAX_IN_BOUND(bound, memo, bound)
+		*resume_out = bound;
+	}
+
+	ALLOC_NODE(result, struct node_stmt_list)
+
+	int stmt_bound;
+	UIS_MIN_IN_BOUND(stmt_bound, memo, bound)
+	result->stmt = build_stmt(j, stmt_bound - 1);
+
+	result->more = build_stmt_list(stmt_bound);
+	result->variation = NULL == result->more ? nv_last : nv_partial;
+
+	CHECK_FAIL
 }
+
+struct node_stmt *build_stmt(int j, int bound) {
+#ifdef PARSETREE_DEBUG
+	printf("build_stmt called, j = %d, bound = %d\n", j, bound);
+#endif
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, STMT_MT, j)
+
+	int stmt_end;
+	UIS_MAX_IN_BOUND(stmt_end, memo, bound)
+
+	if (stmt_end != bound) {
+		printf("Disagreement between statement list bound and statement end (%d vs %d)!\n",
+				bound, stmt_end);
+		pt_failed = 1;
+		return NULL;
+	}
+
+	ALLOC_NODE(result, struct node_stmt)
+
+	/* Try each statement type */
+	if (NULL != (result->stmt = build_proc_call(j, bound))) {
+		result->variation = nv_call_stmt;
+		CHECK_FAIL
+	}
+
+	if (NULL != (result->stmt = build_assignment(j, bound))) {
+		result->variation = nv_assign_stmt;
+		CHECK_FAIL
+	}
+
+	if (NULL != (result->stmt = build_return(j, bound))) {
+		result->variation = nv_ret_stmt;
+		CHECK_FAIL
+	}
+
+	if (NULL != (result->stmt = build_if_stmt(j, bound))) {
+		result->variaiton = nv_if_stmt;
+		CHECK_FAIL
+	}
+
+	printf("Could not create any valid statement node at j = %d!\n", j);
+	pt_failed = 1;
+	return NULL;
+}
+
+struct node_proc_call *build_proc_call(int j, int bound) {
+#ifdef PARSETREE_DEBUG
+	printf("build_proc_call called, j = %d, bound = %d\n", j, bound);
+#endif
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, PROC_CALL_MT, j)
+	if (uis_ret_true == uint_set_isempty(&memo)) {
+		return NULL;
+	}
+
+	int stmt_end;
+	UIS_MAX_IN_BOUND(stmt_end, memo, bound)
+
+	if (stmt_end != bound) {
+		printf("Disagreement between general statement bound and procedure call statement end (%d vs %d)!\n",
+				bound, stmt_end);
+		pt_failed = 1;
+		return NULL;
+	}
+
+	ALLOC_NODE(result, struct node_proc_call)
+
+	result->proc_name = build_ident(j);
+	result->arguments = build_arg_list(j + 2, bound - 1);
+
+	CHECK_FAIL
+}
+
+struct node_assignment *build_assignment(int j, int bound) {
+#ifdef PARSETREE_DEBUG
+	printf("build_assignment called, j = %d, bound = %d\n", j, bound);
+#endif
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, ASSIGN_MT, j)
+
+	if (uis_ret_true == uint_set_isempty(&memo)) {
+		return NULL;
+	}
+
+	int stmt_end;
+	UIS_MAX_IN_BOUND(stmt_end, memo, bound)
+	if (stmt_end != bound) {
+		printf("Disagreement between general statement bound and assignment statement end (%d vs %d)!\n",
+				bound, stmt_end);
+		pt_failed = 1;
+		return NULL;
+	}
+
+	ALLOC_NODE(result, struct node_assignment)
+
+	result->lhs = build_ident(j);
+	
+	int logical_exp_end, arithmetic_exp_end;
+	result->rhs_log = build_logical_exp(j, bound, &logical_exp_end);
+	result->rhs_arith = build_arithmetic_exp(j, bound, &arithmetic_exp_end);
+
+	/* TODO deallocate the portion of the tree used for the type of expression we're not using */
+	if (arithmetic_exp_end == bound) {
+		result->variation = nv_arithmetic;
+		CHECK_FAIL
+	}
+	else if (logical_exp_end == bound) {
+		result->variation = nv_logical;
+		CHECK_FAIL
+	}
+	else {
+		printf("Assignment statement rhs could not be filled by logical nor arithmetic expression at j = %d\n", j);
+		pt_failed = 1;
+		return NULL;
+	}
+}
+
+struct node_return *build_return(int j, int bound) {
+#ifdef PARSETREE_DEBUG
+	printf("build_return called, j = %d, bound = %d\n", j, bound);
+#endif
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, RETURN_STMT_MT, j)
+	if (uis_ret_true == uint_set_isempty(&memo)) {
+		return NULL;
+	}
+
+	int stmt_end;
+	UIS_MAX_IN_BOUND(stmt_end, memo, bound)
+
+	if (stmt_end != bound) {
+		printf("Disagreement between general statement bound and return statement end (%d vs %d)!\n",
+				bound, stmt_end);
+		pt_failed = 1;
+		return NULL;
+	}
+
+	ALLOC_NODE(result, struct node_return)
+
+	int logical_exp_end, arithmetic_exp_end;
+	result->retval_log = build_logical_exp(j, bound, &logical_exp_end);
+	result->retval_arith = build_arithmetic_exp(j, bound, &arithmetic_exp_end);
+
+	/* TODO deallocate the portion of the tree used for the type of expression we're not using */
+	if (arithmetic_exp_end == bound) {
+		result->variation = nv_arithmetic;
+		CHECK_FAIL;
+	}
+	else if (logical_exp_end == bound) {
+		result->variation = nv_logical;
+		CHECK_FAIL
+	}
+	else {
+		printf("Return value could not be filled by logical nor arithmetic expression at j = %d!\n", j);
+		pt_failed = 1;
+		return NULL;
+	}
+}
+
+struct node_if_stmt *build_if_stmt(int j, int bound) {
+#ifdef PARSETREE_DEBUG
+	printf("build_if_stmt called, j = %d, bound = %d\n", j, bound);
+#endif
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, IF_STMT_MT, j)
+
+	if (uis_ret_true == uint_set_isempty(&memo)) {
+		return NULL;
+	}
+
+	int stmt_end;
+	UIS_MAX_IN_BOUND(stmt_end, memo, bound)
+	if (stmt_end != bound) {
+		printf("Disagreement between general statement bound and if statement end (%d vs %d)!\n",
+				bound, stmt_end);
+		pt_failed = 1;
+		return NULL;
+	}
+
+	ALLOC_NODE(result, struct node_if_stmt)
+
+	int pos_end, neg_end;
+	result->stmts_pos = build_stmt_list(j, bound - 2, &pos_end);
+
+	if (pos_end == bound - 2) {
+		result->variation = nv_if_noelse;
+		CHECK_FAIL
+	}
+
+	result->stmts_neg = build_stmt_list(pos_end + 1, bound - 2, &neg_end);
+	CHECK_FAIL
+}
+
+struct node_arg_list *build_arg_list(int j, int bound) {
+#ifdef PARSETREE_DEBUG
+	printf("build_arg_list called, j = %d, bound = %d\n", j, bound);
+#endif
+
+	if (j == bound) {
+		return NULL;
+	}
+
+	struct uint_set memo;
+	GET_NEEDED_MEMO(memo, ARG_LIST_MT, j)
+
+	ALLOC_NODE(result, struct node_arg_list)
+
+	int logical_exp_end, arithmetic_exp_end;
+	int exp_bound;
+	UIS_MIN_IN_BOUND(exp_bound, memo, bound)
+	result->arg_log = build_logical_exp(j, exp_bound, &logical_exp_end);
+	result->arg_arith = build_arithmetic_exp(j, exp_bound, &arithmetic_exp_end);
+	
+	if (arithmetic_exp_end == exp_bound) {
+		result->variation = nv_arithmetic;
+	}
+	else if (logical_exp_end == exp_bound) {
+		result->variation = nv_logical;
+	}
+	else {
+		printf("Neither logical nor arithmetic expression at j = %d fills argument space!\n", j);
+		pt_failed = 1;
+		return NULL;
+	}
+
+	result->more = build_arg_list(exp_bound + 1, bound);
+	if (NULL == result->more) {
+		result->variation |= nv_last;
+	}
+	else {
+		result->variation |= nv_partial;
+	}
+
+	CHECK_FAIL
+}
+
+
+
 
 
 
