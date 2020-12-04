@@ -50,6 +50,10 @@ enum lexer_ret lexer_next() {
 	/* Our current state, so we know how to transition */
 	enum lexer_state cur_state = state_start;
 
+	/* Reset values */
+	current_token_subtype = token_subtype_none;
+	current_value.val_str = NULL;
+
 	if (is_eof) {
 		return 1;
 	}

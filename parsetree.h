@@ -1,6 +1,8 @@
 #ifndef PARSETREE_H
 #define PARSETREE_H
 
+#include "scanner.h"
+
 /* Pre-declarations */
 struct node_program;
 struct node_proc_def;
@@ -42,16 +44,23 @@ enum node_variation {
 	nv_arithmetic = 0b1000,
 
 	/* For if statements */
-	nv_if_noelse = 0b0001
+	nv_if_noelse = 0b0001,
 	nv_if_haselse = 0b0010,
 
+	/* For returns */
+	nv_ret_noval = 0b0010,
+
 	/* For expressions, terms, and factors */
-	nv_exp_parenthesized = 0b0001,
-	nv_exp_simple = 0b0010,
-	nv_exp_binary = 0b0011,
+	nv_parenthesized = 0b0001,
+	nv_simple = 0b0010,
+	nv_binary = 0b0100,
 
 	/* For factors */
-	nv_fac_neg = 0b0100
+	nv_fac_negative = 0b1000,
+
+	/* For values */
+	nv_val_literal = 0b0001,
+	nv_val_ident = 0b0010
 };
 
 /* Construct the parse tree from the parse info */
@@ -145,33 +154,36 @@ struct node_relational_exp {
 	enum node_variation variation;
 	struct node_arithmetic_exp *lhs,
 	                           *rhs;
+	struct node_value          *val;
 	enum token_subtype          op;
 };
 
 struct node_arithmetic_exp {
 	enum node_variation variation;
 	struct node_term           *term;
-	struct node_arithmetic_exp *lhs;
+	struct node_arithmetic_exp *inner_exp;
 	enum token_subtype          op;
 };
 
 struct node_term {
 	enum node_variation variation;
 	struct node_factor *factor;
-	struct node_term   *lhs;
+	struct node_term   *inner_term;
 	enum token_subtype  op;
 };
 
 struct node_factor {
 	enum node_variation variation;
-	struct node_literal        *literal;
+	struct node_value          *val;
 	struct node_arithmetic_exp *inner_exp;
 	struct node_factor         *neg_factor;
 };
 
-struct node_literal {
-	enum token_type val_type;
-	union lexeme_value val;
+struct node_value {
+	enum node_variation variation;
+	enum token_type      lit_type;
+	union lexeme_value   val;
+	struct node_ident   *ident;
 };
 
 #endif
