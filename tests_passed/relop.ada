@@ -1,11 +1,14 @@
 procedure Main is
-    X, Y: Integer;
+	X, Y: Integer;
 begin
-    X := 5;
-    Y := 2;
-    if X > Y then
-        return 1;
-    else
-        return 0;
+	X := 5;
+	Put("Enter an integer: ");
+	Y := GetInt();
+	if X > Y then
+		return 1;
+		PutLn("Should not print!");
+	else
+		return 0;
+		PutLn("Should not print!");
 	end if;
 end Main;
