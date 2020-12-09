@@ -1,4 +1,4 @@
-procedure RelationalOp is
+procedure Main is
     X, Y: Integer;
 begin
     X := 5;
@@ -8,4 +8,4 @@ begin
     else
         return 0;
 	end if;
-end RelationalOp;
+end Main;

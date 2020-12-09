@@ -87,7 +87,10 @@ enum parser_ret parse(char *filename) {
 		return parser_ret_alloc_fail;
 	}
 
+#ifdef PARSER_DEBUG
 	printf("Reading and storing tokens... \n");
+#endif
+
 	token_count = 0;
 	bool keep_going = true;
 	while (keep_going) {
@@ -375,6 +378,9 @@ struct uint_set rule_arg_list(int j) {
 	uint_set_union_with(&result, &result_arith);
 	uint_set_destroy(&result_arith);
 
+	/* arg_list may be empty */
+	uint_set_add(&result, j);
+
 	UPDATE_MEMOTABLE(ARG_LIST_MT)
 	return result;
 }
@@ -588,6 +594,9 @@ struct uint_set rule_factor(int j) {
 	else {
 		result = rule_value(j);
 	}
+
+	struct uint_set result_proc_call = rule_proc_call(j);
+	uint_set_union_with(&result, &result_proc_call);
 
 	UPDATE_MEMOTABLE(FACTOR_MT)
 	return result;

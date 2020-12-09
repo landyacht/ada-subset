@@ -103,7 +103,7 @@ void print_var_def_list(struct node_var_def_list *node, int indent) {
 	IPRINT("- var_names => ")
 	print_ident_list(node->var_names, indent + 2);
 
-	if (nv_last == node->variation) {
+	if (nv_partial == node->variation) {
 		IPRINT("- more => ")
 		print_var_def_list(node->more, indent + 2);
 	}
@@ -178,11 +178,18 @@ void print_stmt(struct node_stmt *node, int indent) {
 void print_proc_call(struct node_proc_call *node, int indent) {
 	BUILD_INDENTATION
 
-	printf("Procedure call:\n");
-	IPRINT("- proc_name: ")
-	print_ident(node->proc_name);
-	IPRINT("- arguments: ")
-	print_arg_list(node->arguments, indent + 2);
+	if (nv_call_args == node->variation) {
+		printf("Procedure call (with arguments):\n");
+		IPRINT("- proc_name => ")
+		print_ident(node->proc_name);
+		IPRINT("- arguments => ")
+		print_arg_list(node->arguments, indent + 2);
+	}
+	else {
+		printf("Procedure call (no arguments):\n");
+		IPRINT("- proc_name => ")
+		print_ident(node->proc_name);
+	}
 }
 
 void print_assignment(struct node_assignment *node, int indent) {
@@ -392,9 +399,6 @@ void print_term(struct node_term *node, int indent) {
 		case token_subtype_div:
 			puts("'/'");
 			break;
-		case token_subtype_mod:
-			puts("'mod'");
-			break;
 		case token_subtype_rem:
 			puts("'rem'");
 			break;
@@ -433,6 +437,11 @@ void print_factor(struct node_factor *node, int indent) {
 		printf("Factor (parenthesized exp):\n");
 		IPRINT("- inner_exp => ")
 		print_arithmetic_exp(node->inner_exp, indent + 2);
+	}
+	else if (nv_fac_proc_call == node->variation) {
+		printf("Factor (procedure call):\n");
+		IPRINT("- proc_call => ")
+		print_proc_call(node->proc_call, indent + 2);
 	}
 	else {
 		puts("Factor had no valid variation!!!");

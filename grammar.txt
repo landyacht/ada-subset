@@ -40,5 +40,6 @@
 <factor>         ::= <value>
                    | "(" <arithmetic_exp> ")"
                    | "-" <factor>
+                   | <proc_call>
 <value>          ::= <literal> | <ident>
 <literal>        ::= <int_lit> | <dec_lit> | <str_lit>

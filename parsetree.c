@@ -9,6 +9,7 @@
 #include "uint_set.h"
 #include "token_store.h"
 #include "scanner.h"
+#include "symbol_table.h"
 
 #define UIS_MAX_IN_BOUND(out, set, bound) \
 	for (int i = bound; i >= j; i--) { \
@@ -27,7 +28,7 @@
 	}
 
 #define ALLOC_NODE(out, type) \
-	type *out = malloc(sizeof(type)); \
+	type *out = calloc(1, sizeof(type)); \
 	if (NULL == out) { \
 		puts("Failed to allocate space for type"); \
 		pt_failed = 1; \
@@ -51,6 +52,11 @@
 
 /* Failure indicator */
 int pt_failed;
+
+/* For adding identifiers to the symbol table */
+int store_symbols;
+char current_namespace[SYMTBL_MAX_NAME_LEN + 1];
+enum symbol_type current_decl_type;
 
 /* Pre-declarations
  * The third int* parameter on some of these routines lets the caller know how
@@ -112,6 +118,9 @@ struct node_proc_def *build_proc_def(int j, int bound) {
 	ALLOC_NODE(result, struct node_proc_def)
 
 	result->name = build_ident(j + 1);
+
+	strncpy(current_namespace, result->name->name, SYMTBL_MAX_NAME_LEN);
+
 	struct node_ident *end_name = build_ident(bound - 2);
 	if (0 != strcmp(result->name->name, end_name->name)) {
 		printf("End identifier (%s) does not match declared name for procedure '%s'!\n",
@@ -173,7 +182,26 @@ struct node_var_def_list *build_var_def_list(int j, int bound, int *resume_out) 
 	int this_bound;
 	UIS_MIN_IN_BOUND(this_bound, memo, bound)
 	result->type_name = build_ident(this_bound - 2);
+
+	if (0 == strcmp(result->type_name->name, "Integer")) {
+		current_decl_type = symbol_type_integer;
+	}
+	else if (0 == strcmp(result->type_name->name, "Float")) {
+		current_decl_type = symbol_type_float;
+	}
+	else if (0 == strcmp(result->type_name->name, "String")) {
+		current_decl_type = symbol_type_string;
+	}
+	else if (0 == strcmp(result->type_name->name, "Boolean")) {
+		current_decl_type = symbol_type_boolean;
+	}
+	else {
+		printf("Invalid type '%s' in declaration!!!\n", result->type_name->name);
+	}
+
+	store_symbols = 1;
 	result->var_names = build_ident_list(j, this_bound - 3);
+	store_symbols = 0;
 
 	result->more = build_var_def_list(this_bound, bound, NULL);
 	result->variation = NULL == result->more ? nv_last : nv_partial;
@@ -213,6 +241,23 @@ struct node_ident *build_ident(int j) {
 	int name_len = strlen(ident_name.val_str);
 	result->name = malloc(sizeof(char) * (name_len + 1));
 	strcpy(result->name, ident_name.val_str);
+
+	if (store_symbols) {
+		switch (symtbl_add(current_namespace, ident_name.val_str, current_decl_type, &result->symtbl_pos)) {
+		case symtbl_ret_name_too_long:
+			printf("Symbol name '%s' was longer than max allowed name length (%d)!!!\n",
+					ident_name.val_str, SYMTBL_MAX_NAME_LEN);
+			pt_failed = 1;
+			return NULL;
+		case symtbl_ret_already_defined:
+			printf("Redefinition of symbol '%s'!!!\n", ident_name.val_str);
+			pt_failed = 1;
+			return NULL;
+		}
+	}
+	else {
+		result->symtbl_pos = symtbl_find(current_namespace, ident_name.val_str);
+	}
 
 	return result;
 }
@@ -317,7 +362,13 @@ struct node_proc_call *build_proc_call(int j, int bound) {
 	ALLOC_NODE(result, struct node_proc_call)
 
 	result->proc_name = build_ident(j);
-	result->arguments = build_arg_list(j + 2, bound - 1);
+	if (3 == bound - j) {
+		result->variation = nv_call_noargs;
+	}
+	else {
+		result->arguments = build_arg_list(j + 2, bound - 1);
+		result->variation = nv_call_args;
+	}
 
 	CHECK_FAIL
 }
@@ -632,7 +683,6 @@ struct node_arithmetic_exp *build_arithmetic_exp(int j, int bound, int *resume_o
 				result->term = build_term(i, bound);
 				result->inner_exp = build_arithmetic_exp(j, i - 1, NULL);
 				token_store_get(i - 1, NULL, &result->op, NULL);
-				printf("Arith op = %d\n", result->op);
 				result->variation = nv_binary;
 				CHECK_FAIL
 			}
@@ -719,6 +769,13 @@ struct node_factor *build_factor(int j, int bound) {
 	if (token_subtype_minus == maybe_minus) {
 		result->neg_factor = build_factor(j + 1, bound);
 		result->variation = nv_fac_negative;
+		CHECK_FAIL
+	}
+
+	token_store_get(j + 1, &maybe_lparen, NULL, NULL);
+	if (token_type_lparen == maybe_lparen) {
+		result->variation = nv_fac_proc_call;
+		result->proc_call = build_proc_call(j, bound);
 		CHECK_FAIL
 	}
 

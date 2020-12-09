@@ -18,7 +18,7 @@ enum lexer_state {
 	state_start,         /* no characters yet */
 	state_maybe_relop,   /* we have encountered < or > or / which may be alone or with an = */
 	state_ident,         /* we have part or all of an identifier */
-	state_kw_op,         /* we have part or all of a keyword (is, begin, etc.) or operator (mod, rem, etc.) */
+	state_kw_op,         /* we have part or all of a keyword (is, begin, etc.) or operator (rem, etc.) */
 	state_maybe_assign,  /* we either have the assignment op or a colon */
 	state_in_str,        /* we're inside a string */
 	state_num_leftside,  /* either an integer or the left side of a decimal literal */
@@ -231,12 +231,7 @@ enum lexer_ret lexer_next() {
 				}
 
 				current_lexeme[needle] = '\0';
-				if (0 == strcmp(current_lexeme, "mod")) {
-					current_token_type = token_type_binop_multiplicative;
-					current_token_subtype = token_subtype_mod;
-					return lexer_ret_success;
-				}
-				else if (0 == strcmp(current_lexeme, "rem")) {
+				if (0 == strcmp(current_lexeme, "rem")) {
 					current_token_type = token_type_binop_multiplicative;
 					current_token_subtype = token_subtype_rem;
 					return lexer_ret_success;

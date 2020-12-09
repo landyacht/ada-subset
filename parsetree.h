@@ -43,6 +43,10 @@ enum node_variation {
 	nv_logical = 0b0100,
 	nv_arithmetic = 0b1000,
 
+	/* For procedure calls */
+	nv_call_args = 0b0001,
+	nv_call_noargs = 0b0010,
+
 	/* For if statements */
 	nv_if_noelse = 0b0001,
 	nv_if_haselse = 0b0010,
@@ -56,7 +60,8 @@ enum node_variation {
 	nv_binary = 0b0100,
 
 	/* For factors */
-	nv_fac_negative = 0b1000,
+	nv_fac_negative = 0b0100,
+	nv_fac_proc_call = 0b1000,
 
 	/* For values */
 	nv_val_literal = 0b0001,
@@ -112,6 +117,7 @@ struct node_stmt {
 };
 
 struct node_proc_call {
+	enum node_variation variation;
 	struct node_ident    *proc_name;
 	struct node_arg_list *arguments;
 };
@@ -177,6 +183,7 @@ struct node_factor {
 	struct node_value          *val;
 	struct node_arithmetic_exp *inner_exp;
 	struct node_factor         *neg_factor;
+	struct node_proc_call      *proc_call;
 };
 
 struct node_value {
