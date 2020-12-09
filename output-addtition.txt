@@ -1,0 +1,16 @@
+Reading and storing tokens...
+Arith op = 0
+Arith op = 0
+----- BEGIN PARSETREE PRINTOUT -----
+Program (last):
+- proc => Procedure definition (with parameters, no declarations):
+  - name => Identifier: name => Addition
+  - param_list => Variable definition list (last):
+    - type_name => Identifier: name => Integer
+    - var_names => Identifier list (partial):
+      - ident => Identifier: name => X
+      - more => Identifier list (partial):
+        - ident => Identifier: name => Y
+        - more => Identifier list (last):
+          - ident => Identifier: name => Z
+    - more =>

@@ -1,0 +1,12 @@
+Reading and storing tokens...
+----- BEGIN PARSETREE PRINTOUT -----
+Program (last):
+- proc => Procedure definition (no parameters, with declarations):
+  - name => Identifier: name => RelationalOp
+  - var_decls => Variable definition list (last):
+    - type_name => Identifier: name => Integer
+    - var_names => Identifier list (partial):
+      - ident => Identifier: name => X
+      - more => Identifier list (last):
+        - ident => Identifier: name => Y
+    - more =>
